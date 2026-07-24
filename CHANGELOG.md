@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.1-rc.5](https://github.com/cashubtc/cashu-ts/compare/v5.0.0-rc.5...v5.0.1-rc.5) (2026-07-24)
+
+
+### Bug Fixes
+
+* tidy response reads and number-token parsing ([#886](https://github.com/cashubtc/cashu-ts/issues/886)) ([24e1593](https://github.com/cashubtc/cashu-ts/commit/24e1593d60827e9b8efe715613cbf62b537e419d))
+
 ## [5.0.0-rc.5](https://github.com/cashubtc/cashu-ts/compare/v5.0.0-rc.4...v5.0.0-rc.5) (2026-07-23)
 
 
