@@ -99,7 +99,7 @@ import { WalletOps } from './WalletOps';
 
 const PENDING_KEYSET_ID = '__PENDING__';
 
-// NUT-20 "Signature for mint request invalid" (cashubtc/nuts error_codes.md). Returned by mints
+// Error code 20008 "Signature for mint request invalid" (cashubtc/nuts error_codes.md, NUT-20). Returned by mints
 // that reject a quote signature — used to trigger the legacy-message fallback in completeMint().
 const MINT_QUOTE_SIGNATURE_INVALID_CODE = 20008;
 
@@ -883,6 +883,7 @@ class Wallet {
 
     // Sort ASC by amount for privacy, but keep indices to return order afterwards
     // But ONLY if the transaction is NOT SIG_ALL (as order is fixed for signing)
+    // NUT #03: the client **SHOULD** ensure that the list requested outputs is ordered by amount in ascending order.
     const mergedBlindingData = [...keepOutputs, ...sendOutputs];
     const indices = mergedBlindingData.map((_, i) => i);
     if (!isP2PKSigAll(inputs)) {
@@ -1444,6 +1445,8 @@ class Wallet {
     this.failIfNullish(outputData, 'OutputData is required for SIG_ALL proof signing.');
     assertSigAllInputs(normalizedProofs);
 
+    // NUT #11: If this condition is met, the `SIG_ALL` flag is enforced and only **the first input of a transaction requires a witness** that covers all other inputs and outputs of the transaction. All signatures by the signing public keys MUST be provided in the `Proof.witness` of the first input of the transaction.
+
     // SIG_ALL is in flux currently, so let's generate all known message formats
     // and sign the first proof only against each message...
     const [first, ...rest] = normalizedProofs;
@@ -1468,7 +1471,9 @@ class Wallet {
    * @throws Throws an error if the proofs keyset is unknown.
    */
   getFeesForProofs(proofs: Array<Pick<Proof, 'id'>>): Amount {
+    // NUT #02: wallets **MUST** add fees to the inputs or, vice versa, subtract from the outputs.
     const sumPPK = Amount.sum(proofs.map((proof) => this.getProofFeePPK(proof))).toBigInt();
+    // NUT #02: return (sum_fees + 999) // 1000
     return Amount.from((sumPPK + 999n) / 1000n);
   }
 
@@ -1505,6 +1510,7 @@ class Wallet {
     try {
       // We must NOT fallback to wallet's keyset
       const feePPK = this._keyChain.getKeyset(keysetId).fee;
+      // NUT #02: return (sum_fees + 999) // 1000
       return Amount.from(Math.floor(Math.max((nInputs * feePPK + 999) / 1000, 0)));
     } catch (e) {
       const message = `No keyset found with ID ${keysetId}`;
@@ -1642,6 +1648,7 @@ class Wallet {
     config?: RestoreConfig,
   ): Promise<{ proofs: Proof[]; lastCounterWithSignature?: number }> {
     this.failIfNullish(this._seed, 'Cashu Wallet must be initialized with a seed to use restore');
+    // NUT #09: Wallets provide the `BlindedMessage` for which they request the `BlindSignature`.
     const { keysetId } = config || {};
 
     // Ensure we have keys - wallet only loads active keysets by default
@@ -1666,6 +1673,7 @@ class Wallet {
     const signatureMap: { [sig: string]: SerializedBlindedSignature } = {};
     outputs.forEach((o, i) => (signatureMap[o.B_] = signatures[i]));
 
+    // NUT #09: The returned arrays `outputs` and `signatures` are of the same length and for every entry `outputs[i]`, there is a corresponding entry `signatures[i]`.
     const restoredProofs: Proof[] = [];
     let lastCounterWithSignature: number | undefined;
 
@@ -2010,6 +2018,7 @@ class Wallet {
     quote: Pick<MintQuoteBaseResponse, 'quote'>,
     requestedAmount: Amount,
   ): void {
+    // NUT #04: The total output amount **MUST NOT** exceed the quote's currently mintable amount, `amount_paid - amount_issued`.
     if (method !== 'bolt12' && method !== 'onchain') {
       return;
     }
@@ -2855,6 +2864,7 @@ class Wallet {
     const normalizedProofs = normalizeProofAmounts(proofsToSend);
     const inputFee = this.getFeesForProofs(normalizedProofs);
     const sendAmount = sumProofs(normalizedProofs);
+    // NUT #05: `fee_reserve` is the additional fee reserve for using the method (the wallet provides proofs covering at least `amount + fee_reserve + fee`, where `fee` is the keyset input fee per [NUT-02][02])
     const totalRequired = meltQuote.amount.add(feeOption.fee_reserve).add(inputFee);
     this.failIf(sendAmount.lessThan(totalRequired), 'Not enough proofs to cover amount + fee', {
       sendAmount: sendAmount.toString(),
@@ -3023,6 +3033,7 @@ class Wallet {
       quote,
       inputs,
       outputs,
+      // NUT #05: For other methods, the wallet can set `prefer_async` to `true` in the melt request body to request asynchronous processing.
       ...(completeOptions.preferAsync ? { prefer_async: true } : {}),
       ...completeOptions.extraPayload,
     };

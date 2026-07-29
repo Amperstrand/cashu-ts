@@ -39,6 +39,11 @@ import { CTSError } from '../model/Errors';
  *   handling in the decoder and emit the appropriate tags in the encoder.
  */
 
+// NUT #00: V4 tokens are a space-efficient way of serializing tokens using the CBOR binary format.
+// NUT #00: We serialize this JSON using CBOR which can be seen [here](https://cbor.nemo157.com/#type=hex&value=a3617482a261694800ffd48b8f5ecf80617081a36161016173784061636331323433356537623834383463336366313835303134393231386166393066373136613532626634613565643334376534386563633133663737333838616358210244538319de485d55bed3b29a642bee5879375ab9e7a620e11e48ba482421f3cfa261694800ad268c4d1f5826617082a3616102617378403133323364336434373037613538616432653233616461346539663166343966356135623461633762373038656230643631663733386634383330376538656561635821023456aa110d84b4ac747aebd82c3b005aca50bf457ebd5737a4414fac3ae7d94da36161016173784035366263626362623763633634303662336661356435376432313734663465666638623434303262313736393236643361353764336333646362623539643537616358210273129c5719e599379a974a626363c333c56cafc0e6d01abe46d5808280789c63616d75687474703a2f2f6c6f63616c686f73743a33333338617563736174). The resulting bytes are then serialized to a string using `base64_urlsafe` and the prefix `cashuB` is added.
+// NUT #00: Unless otherwise stated, fields of type `bytes` represent byte strings in the CBOR encoding. In the original JSON representation of `Proof` objects, these values are encoded as hexadecimal strings. Implementations MUST convert between hex strings and raw byte arrays when translating between JSON and CBOR representations.
+// NUT #00: Binary Encoding V4: `utf8("craw") || utf8("B") || cbor(token_v4_object)`
+
 /* Reference: CBOR specification (RFC 8949) https://www.rfc-editor.org/rfc/rfc8949.html */
 
 type SimpleValue = boolean | null | undefined;

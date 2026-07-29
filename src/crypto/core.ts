@@ -35,9 +35,12 @@ export type UnblindedSignature = {
   id: string;
 };
 
+// NUT #00: `DOMAIN_SEPARATOR` constant byte string `b"Secp256k1_HashToCurve_Cashu_"`
 const DOMAIN_SEPARATOR = utf8ToBytes('Secp256k1_HashToCurve_Cashu_');
 
 export function hashToCurve(secret: Uint8Array): WeierstrassPoint<bigint> {
+  // NUT #00: `Y = PublicKey('02' || SHA256(msg_hash || counter))` where `msg_hash` is `SHA256(DOMAIN_SEPARATOR || x)`
+  // NUT #00: `counter` uint32 counter(byte order little endian) incremented from 0 until a point is found that lies on the curve
   const msgToHash = sha256(Bytes.concat(DOMAIN_SEPARATOR, secret));
   const counter = new Uint32Array(1);
   const maxIterations = 2 ** 16;
@@ -101,6 +104,7 @@ export function createBlindSignature(
  * @returns A RawBlindedMessage: {B_, r, secret}
  */
 export function createRandomRawBlindedMessage(): RawBlindedMessage {
+  // NUT #00: the use of a 64 character hex string generated from 32 random bytes is recommended to prevent fingerprinting
   const secretStr = bytesToHex(randomBytes(32)); // 64 char ASCII hex string
   const secretBytes = new TextEncoder().encode(secretStr); // UTF-8 of the hex
   return blindMessage(secretBytes);
@@ -114,6 +118,7 @@ export function createRandomRawBlindedMessage(): RawBlindedMessage {
  * @returns A RawBlindedMessage: {B_, r, secret}
  */
 export function blindMessage(secret: Uint8Array, r?: bigint): RawBlindedMessage {
+  // NUT #00: `Alice` sends to `Bob`: `B_ = Y + rG` with `r` being a random blinding factor (**blinding**)
   const Y = hashToCurve(secret);
   if (r === undefined) {
     r = secp256k1.Point.Fn.fromBytes(createRandomSecretKey());
@@ -130,6 +135,7 @@ export function unblindSignature(
   r: bigint,
   A: WeierstrassPoint<bigint>,
 ): WeierstrassPoint<bigint> {
+  // NUT #00: `Alice` can calculate the unblinded key as `C_ - rK = kY + krG - krG = kY = C` (**unblinding**)
   const C = C_.subtract(A.multiply(r));
   return C;
 }

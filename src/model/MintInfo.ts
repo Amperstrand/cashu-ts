@@ -24,9 +24,9 @@ type ProtectedIndex = {
 export class MintInfo {
   // Full mint info response
   private readonly _mintInfo: GetInfoResponse;
-  // NUT-22, Blind-auth protected endpoints
+  // Blind-auth protected endpoints (NUT-22)
   private readonly _protected22?: ProtectedIndex;
-  // NUT-21, Clear-auth protected endpoints
+  // Clear-auth protected endpoints (NUT-21)
   private readonly _protected21?: ProtectedIndex;
 
   constructor(info: GetInfoResponse, logger?: Logger) {

@@ -129,7 +129,7 @@ export const P2PK_KNOWN_TAG_KEYS = new Set([
 ]);
 
 // ------------------------------
-// NUT-11 Secrets
+// Secrets (NUT-11)
 // ------------------------------
 
 /**
@@ -176,6 +176,7 @@ export function parseP2PKSecret(secret: string | Secret): Secret {
  * @throws If malformed.
  */
 function normalizePubkey(pk: string): string {
+  // NUT #11: Public keys **MUST** use the [compressed Secp256k1 public key format](https://learnmeabitcoin.com/technical/public-key#public-key-format).
   const hex = pk.toLowerCase();
   if (hex.length === 66 && (hex.startsWith('02') || hex.startsWith('03'))) return hex;
   if (hex.length === 64) return `02${hex}`;
@@ -410,6 +411,7 @@ export function signP2PKProofs(
 export function signP2PKProof(proof: Proof, privateKey: PrivKey, message?: string): Proof {
   const secret: Secret = parseP2PKSecret(proof.secret);
   message = message ?? proof.secret; // default message is secret
+  // NUT #11: The `secret` field is **signed as a string**.
 
   // Check if the private key is required to sign by checking its
   // X-only pubkey (no 02/03 prefix) against the expected witness pubkeys
@@ -643,6 +645,7 @@ export function maybeDeriveP2BKPrivateKeys(privateKey: string | string[], proof:
 export function assertSigAllInputs(inputs: Proof[]): void {
   if (inputs.length === 0) throw new CTSError('No proofs');
   // Check first proof
+  // NUT #11: If one input has the signature flag `SIG_ALL`, all other inputs MUST have the same `Secret.data` and `Secret.tags`, and by extension, also be `SIG_ALL`.
   const first = parseP2PKSecret(inputs[0].secret);
   if (getP2PKSigFlag(first) !== 'SIG_ALL') throw new CTSError('First proof is not SIG_ALL');
   const data0 = first[1].data;
@@ -677,6 +680,8 @@ export function buildP2PKSigAllMessage(
 ): string {
   const parts: string[] = [];
   // Concat inputs: secret_0 || C_0 ...
+  // NUT #11: To provide a valid signature, the owner (or owners) of the signing public keys must concatenate the `secret` and `C` fields of all `Proofs` (inputs) with the `amount` and `B_` fields of all `BlindedMessages` (outputs, see [NUT-00][00]) to a single message string in the order they appear in the transaction. This concatenated string is then hashed and signed (see [Signature scheme](#signature-scheme)).
+  // NUT #11: For a melt transaction, the message to sign is composed of all the inputs, the quote ID being paid, and the [NUT-08][08] blank `outputs`.
   for (const p of inputs) {
     parts.push(p.secret, p.C);
   }
@@ -714,6 +719,7 @@ export function isP2PKSigAll(inputs: Proof[]): boolean {
 // ------------------------------
 
 function assertNoDuplicateP2PKTags(tags: string[][]): void {
+  // NUT #11: Each of the above tags may appear exactly **ONCE** in a P2PK secret. If a tag appears more than once, the P2PK secret is malformed and the Proof **MUST** be rejected as unspendable.
   const seen = new Set<string>();
   for (const tag of tags) {
     const key = tag[0];
@@ -726,6 +732,7 @@ function assertNoDuplicateP2PKTags(tags: string[][]): void {
 }
 
 function assertSigFlag(flag: string): asserts flag is SigFlag {
+  // NUT #11: If a P2PK secret has any other signature flag value, the P2PK secret is malformed and the Proof **MUST** be rejected as unspendable.
   if (!VALID_SIG_FLAGS.has(flag as SigFlag)) {
     throw new CTSError(`Invalid sigflag "${flag}": must be "SIG_INPUTS" or "SIG_ALL"`);
   }
@@ -754,6 +761,7 @@ function assertSpendingConditionRules(params: {
   hasLocktime: boolean;
 }): void {
   const { mainKeyCount, refundKeyCount, nSigs, nSigsRefund, hasLocktime } = params;
+  // NUT #11: If `n_sigs` or `n_sigs_refund` is not a positive integer, or exceeds the total number of keys in its pathway, the P2PK secret is malformed and the Proof **MUST** be rejected as unspendable.
 
   if (nSigs !== undefined) {
     assertPositiveInteger(nSigs, 'requiredSignatures (n_sigs)');
@@ -785,6 +793,8 @@ function getP2PKWitnessPubkeys(secret: Secret): string[] {
   const data = getSecretKind(secret) === 'P2PK' ? getDataField(secret) : '';
   const pubkeys = getTag(secret, 'pubkeys') ?? [];
   const keys = (data ? [data, ...pubkeys] : pubkeys).map((key) => normalizePubkey(key));
+  // NUT #11: Each key **MUST** appear at most **ONCE** per [multi-signature](#Multisig) pathway. The same key **MAY** appear in both pathways.
+  // NUT #11: If a pathway contains a duplicate key, the P2PK secret is malformed and the Proof **MUST** be rejected as unspendable.
   if (dedupeP2PKPubkeys(keys).length !== keys.length) {
     throw new CTSError('Duplicate main pubkeys are not allowed');
   }

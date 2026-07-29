@@ -1,3 +1,6 @@
+// NUT #00: Tokens can be serialized to send them between users `Alice` and `Carol`. Serialized tokens have a Cashu token prefix, a versioning flag, and the token. Optionally, a URI prefix for making tokens clickable on the web.
+// NUT #00: `cashu` is the Cashu token prefix. `[version]` is a single `base64_urlsafe` character to denote the token format version.
+
 import { type Amount } from '../Amount';
 
 import { type Proof } from './proof';
@@ -8,6 +11,7 @@ import { type Proof } from './proof';
  * @remarks
  * Used for decoded v3 and v4 token payloads in the public API.
  */
+// NUT #00: `mint` is the mint URL. The mint URL must be stripped of any trailing slashes (`/`). `Proofs` is an array of `Proof` objects. The next two elements are only for displaying the receiving user appropriate information: `unit` is the currency unit of the token keysets (see [Keysets][01] for supported units), and `memo` is an optional text memo from the sender.
 export type Token = {
   /**
    * The mints URL.
@@ -30,6 +34,7 @@ export type Token = {
 /**
  * A Cashu v3 token.
  */
+// NUT #00: V3 tokens are base64-encoded JSON objects. The token format supports tokens from multiple mints. The JSON is serialized with a `base64_urlsafe` (base64 encoding with `/` replaced by `_` and `+` by `-`). `base64_urlsafe` strings may have padding characters (usually `=`) at the end which can be omitted. Clients need to be able to decode both cases.
 export type DeprecatedToken = {
   /**
    * Token entries.

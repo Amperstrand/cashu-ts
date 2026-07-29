@@ -16,7 +16,7 @@ import {
 import { type P2PKVerificationResult, verifyP2PKSpendingConditions } from './NUT11';
 
 // ------------------------------
-// NUT-14 Secrets
+// Secrets (NUT-14)
 // ------------------------------
 
 /**

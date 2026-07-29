@@ -1,3 +1,6 @@
+// NUT #00: Wallets serialize tokens in a `base64_urlsafe` format (base64 encoding with `/` replaced by `_` and `+` by `-`). `base64_urlsafe` strings may have padding characters (usually `=`) at the end which can be omitted. Clients need to be able to decode both cases.
+// NUT #00: `[base64_token_json]` should be cleared of any whitespace before serializing.
+
 import { Bytes } from './Bytes';
 import { JSONInt } from './JSONInt';
 

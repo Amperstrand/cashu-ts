@@ -132,7 +132,7 @@ export function decodeTLV(data: Uint8Array): DecodedTLVPaymentRequest {
         result.transports.push(parseTransport(part.value));
         break;
       case TAG_NUT10:
-        // NUT-26 tag 0x08 is not repeatable (unlike mint/transport). A second
+        // Tag 0x08 (NUT-26) is not repeatable (unlike mint/transport). A second
         // nut10 makes the requested lock ambiguous, so reject rather than guess.
         if (result.nut10) {
           throw new CTSError('invalid pr: multiple nut10 spending conditions');

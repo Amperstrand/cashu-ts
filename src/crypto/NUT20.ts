@@ -26,6 +26,7 @@ function amountToMinimalBytes(blindedMessage: SerializedBlindedMessage): Uint8Ar
 function constructMessage(quote: string, blindedMessages: SerializedBlindedMessage[]): Uint8Array {
   // Stream into the digest rather than concat-then-hash: spreading the per-output chunks into
   // concatBytes(...) would hit V8's argument-count limit on large batches.
+  // NUT #20: To authenticate a mint request, the signer commits to the quote ID and all `BlindedMessages` (the outputs, see [NUT-00][00]) of the `PostMintBolt11Request`, in the order they appear in the request. The message is built over raw bytes:
   const transcript = sha256.create();
   transcript.update(MINT_QUOTE_SIG_DST);
   const quoteBytes = utf8ToBytes(quote);
@@ -57,7 +58,7 @@ function constructLegacyMessage(
   return sha256(utf8ToBytes(message));
 }
 
-// NUT-20 quote pubkeys are compressed 33-byte SEC1 (66 hex chars).
+// Quote pubkeys are compressed 33-byte SEC1 (66 hex chars) — NUT-20.
 function isCompressedPubkey(pubkey: string): boolean {
   return pubkey.length === 66;
 }
@@ -95,6 +96,7 @@ export function signMintQuoteAmended(
   quote: string,
   blindedMessages: SerializedBlindedMessage[],
 ): string {
+  // NUT #20: We use a [BIP340](https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki) Schnorr signature on the SHA-256 hash of the message to sign as defined above.
   return schnorrSignDigest(constructMessage(quote, blindedMessages), privkey);
 }
 

@@ -102,6 +102,7 @@ export class Keyset {
    *
    * @returns True if verification succeeds, false otherwise (e.g: no keys or mismatch).
    */
+  // NUT #02: Wallets **SHOULD** compute the keyset `id` for a given keyset themselves to verify that the mint is using the correct keyset in its responses.
   verify(): boolean {
     if (!this.hasKeys) {
       return false;

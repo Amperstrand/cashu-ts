@@ -45,6 +45,7 @@ export function deserializeMintKeys(serializedMintKeys: SerializedMintKeys): Raw
 }
 
 export function getPubKeyFromPrivKey(privKey: Uint8Array): Uint8Array<ArrayBufferLike> {
+  // NUT #01: The mint **MUST** use the [compressed Secp256k1 public key format](https://learnmeabitcoin.com/technical/public-key#public-key-format) to represent its public keys.
   return secp256k1.getPublicKey(privKey, true);
 }
 
@@ -104,6 +105,7 @@ export function createNewMintKeys(
 }
 
 export function verifyUnblindedSignature(proof: UnblindedSignature, privKey: Uint8Array): boolean {
+  // NUT #00: `Bob` who then checks that `k*hash_to_curve(x) == C` (**verification**)
   const Y: WeierstrassPoint<bigint> = hashToCurve(proof.secret);
   const a = secp256k1.Point.Fn.fromBytes(privKey);
   const aY: WeierstrassPoint<bigint> = Y.multiply(a);

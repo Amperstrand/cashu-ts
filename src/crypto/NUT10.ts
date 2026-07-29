@@ -13,7 +13,7 @@ export interface SecretData {
 export type Secret = [SecretKind, SecretData];
 
 // ------------------------------
-// NUT-10 Secrets
+// Secrets (NUT-10)
 // ------------------------------
 
 /**

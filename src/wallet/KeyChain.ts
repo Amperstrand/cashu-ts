@@ -130,6 +130,7 @@ export class KeyChain {
    * path.
    * @param forceRefresh If true, re-fetches data even if already loaded.
    */
+  // NUT #01: Wallet user `Alice` receives public keys from mint `Bob` via `GET /v1/keys`. The set of all public keys for a set of amounts is called a _keyset_.
   async init(forceRefresh?: boolean): Promise<void> {
     // Skip if already loaded, unless force
     if (Object.keys(this.keysets).length > 0 && !forceRefresh) {
@@ -137,6 +138,8 @@ export class KeyChain {
     }
 
     // Fetch keys and keysets in parallel
+    // NUT #02: If we don't have any keys from this mint yet, get all keys: `GET /v1/keys` and store them
+    // NUT #02: Get all keysets with `GET /v1/keysets`
     const [allKeysetsResponse, allKeysResponse]: [GetKeysetsResponse, GetKeysResponse] =
       await Promise.all([this.mint.getKeySets(), this.mint.getKeys()]);
 
@@ -163,6 +166,8 @@ export class KeyChain {
    * @param allKeys Keys data from mint.getKeys() API.
    */
   private buildKeychain(allKeysets: MintKeyset[], allKeys: MintKeys[]): void {
+    // NUT #02: Wallets should support multiple keysets. They must respect the `active` and the `input_fee_ppk` properties of the keysets they use.
+
     // Clear existing keysets to avoid stale data
     this.keysets = {};
 
@@ -212,6 +217,7 @@ export class KeyChain {
     if (Object.keys(this.keysets).length === 0) {
       throw new CTSError('KeyChain not initialized');
     }
+    // NUT #02: When constructing outputs for a transaction, wallets **MUST** choose only `active` keysets (see [NUT-00][00]).
     const activeKeysets = Object.values(this.keysets).filter(
       (k) => k.unit === this.unit && k.isActive && k.hasHexId && k.hasKeys,
     );
@@ -229,6 +235,8 @@ export class KeyChain {
    * @throws If keyset keys not found or verification fails.
    */
   async ensureKeysetKeys(id: string): Promise<Keyset> {
+    // NUT #02: To receive the public keys of a specific keyset, a wallet can call the `GET /v1/keys/{keyset_id}` endpoint where `keyset_id` is the keyset ID.
+
     // Check keyset exists
     const existing = this.keysets[id];
     if (!existing) {
