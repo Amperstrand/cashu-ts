@@ -14,3 +14,5 @@ test-results
 .husky/_
 reports
 .stryker-tmp
+nuts/
+.coverage
