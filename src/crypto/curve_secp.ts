@@ -140,7 +140,12 @@ export function createRandomRawBlindedMessage(): RawBlindedMessage {
 /**
  * Blind a secret message.
  *
- * @param secret A UTF-8 byte encoded string.
+ * @param secret A UTF-8 byte encoded string. Note: this must be the UTF-8 encoding of the final
+ *   secret string that will be published in the resulting Proof — not the raw entropy the string
+ *   was derived from. Blinding `hexDecode(secret)` instead of `utf8(secret)` produces a
+ *   plausible-looking but permanently unspendable token, because mints verify `C == a *
+ *   hash_to_curve(utf8(secret))` only at spend time. If you have a secret string, prefer
+ *   {@link blindMessageFromSecret}.
  * @param r Optional. Deterministic blinding scalar to use (eg: for testing / seeded)
  * @returns A RawBlindedMessage: {B_, r, secret}
  */
@@ -154,6 +159,48 @@ export function blindMessage(secret: Uint8Array, r?: bigint): RawBlindedMessage 
   const rG = secp256k1.Point.BASE.multiply(r);
   const B_ = Y.add(rG);
   return { B_, r, secret };
+}
+
+/**
+ * Blind a secret string.
+ *
+ * @remarks
+ * Canonical string-first variant of {@link blindMessage}: hashes the UTF-8 encoding of the final
+ * secret string exactly as it will be published in the Proof. This removes the entropy-vs-string
+ * encoding ambiguity at the blinding boundary.
+ * @param secret The final Proof secret string (eg: a 64-character lowercase hex string generated
+ *   from 32 random bytes, as recommended by NUT-00).
+ * @param r Optional. Deterministic blinding scalar to use (eg: for testing / seeded)
+ * @returns A RawBlindedMessage: {B_, r, secret} with `secret` as the UTF-8 bytes of the input
+ *   string.
+ */
+export function blindMessageFromSecret(secret: string, r?: bigint): RawBlindedMessage {
+  return blindMessage(new TextEncoder().encode(secret), r);
+}
+
+/**
+ * Verify that a blinded message is consistent with the secret string that will be published in the
+ * resulting Proof.
+ *
+ * @remarks
+ * This is the only client-side point where a secret-encoding mistake is detectable before outputs
+ * are submitted to a mint; no mint-side detection is possible by design (blind signatures are
+ * agnostic to how `B_` was derived). Wallets SHOULD run this check before spending tokens on a mint
+ * operation.
+ * @param B_ The blinded message that will be (or was) submitted.
+ * @param r The blinding factor used to construct `B_`.
+ * @param secret The secret string that will be published in the Proof.
+ * @returns True when `B_ == hash_to_curve(utf8(secret)) + r*G`.
+ */
+export function verifyOutputConsistency(
+  B_: WeierstrassPoint<bigint>,
+  r: bigint,
+  secret: string,
+): boolean {
+  const expected = hashToCurve(new TextEncoder().encode(secret)).add(
+    secp256k1.Point.BASE.multiply(r),
+  );
+  return B_.equals(expected);
 }
 
 export function unblindSignature(
